@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaCode Editor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/oceanic-next.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #81C784;
+            --accent-color: #C8E6C9;
+            --background-light: #E8F5E9;
+            --background-dark: #C8E6C9;
+            --text-color: #1B5E20;
+            --border-color: #A5D6A7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-light), var(--background-dark));
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .file-list {
+            list-style: none;
+        }
+
+        .file-list li {
+            padding: 0.8rem 1rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .file-list li:hover {
+            background: var(--accent-color);
+            transform: translateX(5px);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-rows: 1fr 200px;
+            gap: 1rem;
+        }
+
+        .editor-container {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 1rem;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .preview-container {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .toolbar {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 100;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .CodeMirror {
+            height: calc(100% - 2rem);
+            border-radius: 8px;
+            font-size: 14px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .theme-selector {
+            margin: 1.5rem 0;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.7);
+            color: var(--text-color);
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: var(--primary-color);
+        }
+
+        .file-name-input {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Files</h2>
+            <input type="text" id="fileName" class="file-name-input" placeholder="Enter file name...">
+            <div class="theme-selector">
+                <select id="themeSelect">
+                    <option value="oceanic-next">Oceanic Next</option>
+                    <option value="solarized">Solarized</option>
+                    <option value="material">Material</option>
+                    <option value="neo">Neo</option>
+                </select>
+            </div>
+            <ul class="file-list" id="fileList"></ul>
+        </div>
+        <div class="main-content">
+            <div class="editor-container">
+                <div class="toolbar">
+                    <button id="saveBtn">Save</button>
+                    <button id="exportBtn">Export</button>
+                    <button id="newFileBtn">New File</button>
+                </div>
+                <textarea id="editor"></textarea>
+            </div>
+            <div class="preview-container" id="preview"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+    <script>
+        class CodeEditor {
+            constructor() {
+                this.editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+                    lineNumbers: true,
+                    theme: 'oceanic-next',
+                    mode: 'xml',
+                    autoCloseTags: true,
+                    autoCloseBrackets: true,
+                    matchBrackets: true,
+                    indentUnit: 4,
+                    lineWrapping: true,
+                    tabSize: 4,
+                    styleActiveLine: true,
+                    foldGutter: true,
+                    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                    extraKeys: {"Ctrl-Space": "autocomplete"}
+                });
+
+                this.files = [];
+                this.currentFile = null;
+                this.setupEventListeners();
+                this.initializeFiles();
+            }
+
+            setupEventListeners() {
+                document.getElementById('themeSelect').addEventListener('change', (e) => {
+                    this.changeTheme(e.target.value);
+                });
+
+                document.getElementById('saveBtn').addEventListener('click', () => {
+                    this.saveFile();
+                });
+
+                document.getElementById('exportBtn').addEventListener('click', () => {
+                    this.exportFile();
+                });
+
+                document.getElementById('newFileBtn').addEventListener('click', () => {
+                    this.createNewFile();
+                });
+
+                this.editor.on('change', () => {
+                    this.updatePreview();
+                });
+            }
+
+            initializeFiles() {
+                this.addFile('index.html', 'xml');
+                this.addFile('styles.css', 'css');
+                this.addFile('script.js', 'javascript');
+                this.renderFileList();
+            }
+
+            addFile(name, type) {
+                const fileExtension = name.split('.').pop();
+                let mode;
+                switch(fileExtension) {
+                    case 'html': mode = 'xml'; break;
+                    case 'css': mode = 'css'; break;
+                    case 'js': mode = 'javascript'; break;
+                    default: mode = 'xml';
+                }
+
+                this.files.push({
+                    name,
+                    type: mode,
+                    content: ''
+                });
+            }
+
+            createNewFile() {
+                const fileName = document.getElementById('fileName').value;
+                if (!fileName) {
+                    this.showNotification('Please enter a file name!', 'error');
+                    return;
+                }
+                this.addFile(fileName);
+                this.renderFileList();
+                this.showNotification('New file created!');
+                document.getElementById('fileName').value = '';
+            }
+
+            renderFileList() {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+                
+                this.files.forEach(file => {
+                    const li = document.createElement('li');
+                    li.textContent = file.name;
+                    li.addEventListener('click', () => this.openFile(file));
+                    fileList.appendChild(li);
+                });
+            }
+
+            openFile(file) {
+                this.currentFile = file;
+                this.editor.setValue(file.content);
+                this.editor.setOption('mode', file.type);
+                this.showNotification(`Opened ${file.name}`);
+            }
+
+            saveFile() {
+                if (this.currentFile) {
+                    this.currentFile.content = this.editor.getValue();
+                    this.showNotification('File saved successfully!');
+                    
+                    // Save to localStorage
+                    localStorage.setItem('aquacode_files', JSON.stringify(this.files));
+                }
+            }
+
+            exportFile() {
+                if (this.currentFile) {
+                    const blob = new Blob([this.editor.getValue()], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = this.currentFile.name;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    this.showNotification('File exported successfully!');
+                }
+            }
+
+            updatePreview() {
+                if (this.currentFile && this.currentFile.type === 'xml') {
+                    const preview = document.getElementById('preview');
+                    preview.innerHTML = this.editor.getValue();
+                }
+            }
+
+            changeTheme(theme) {
+                this.editor.setOption('theme', theme);
+                this.showNotification(`Theme changed to ${theme}`);
+            }
+
+            showNotification(message, type = 'success') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? 'var(--primary-color)' : 'var(--danger-color)'};
+                    color: white;
+                    padding: 1rem 2rem;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                    animation: slideIn 0.3s ease-out;
+                    z-index: 1000;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+        }
+
+        // Initialize the editor when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const editor = new CodeEditor();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
