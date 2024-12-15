@@ -1,5 +1,5 @@
 
-2. Open `CodeEditor.html` in your web browser
+### Open `CodeEditor.html` in your web browser
 
 ## How to Use
 
