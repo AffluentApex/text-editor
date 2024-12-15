@@ -1,6 +1,3 @@
-
-### Open `CodeEditor.html` in your web browser
-
 ## How to Use
 
 1. **Create a New File**
